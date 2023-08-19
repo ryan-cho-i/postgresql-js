@@ -5,9 +5,9 @@ services:
     container_name: my-postgres-db
     restart: always
     environment:
+      POSTGRES_DB: dashboard
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: dashboard
     ports:
       - "5432:5432"
     volumes:

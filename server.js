@@ -2,16 +2,44 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-app.get("/", async (req, res) => {
+const { Client } = require("pg");
+
+const client = new Client({
+  host: "localhost",
+  port: 5432,
+  user: "postgres",
+  password: "postgres",
+  database: "dashboard",
+});
+
+client
+  .connect()
+  .then(() => console.log("PostgreSQL Connected successfully"))
+  .catch((error) => console.error("Connection error", error));
+
+app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "client.html"));
 });
 
 app.get("/getData", async (req, res) => {
-  res.json([
-    { 이름: "홍길동", 나이: 25, 성별: "남성" },
-    { 이름: "이순신", 나이: 35, 성별: "남성" },
-    { 이름: "유관순", 나이: 20, 성별: "여성" },
-  ]);
+  try {
+    const result = await client.query(
+      `
+      SELECT Campaign,
+        sum(impressions) as total_impressions,
+        sum(clicks) as total_clicks,
+        round((sum(clicks)::numeric * 100 / sum(impressions)::numeric)::numeric(10,4), 3) as total_click_rate,
+        sum(video_completions) as total_video_completions 
+      FROM Campaigns 
+      GROUP BY Campaign 
+      ORDER BY Campaign
+    `
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Sending data to HTML failed");
+  }
 });
 
 PORT = 8080;
