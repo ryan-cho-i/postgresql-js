@@ -1,3 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+      crossorigin="anonymous"
+    />
+    <title>데이터 표</title>
+  </head>
+  <body>
+    <div class="container mt-4">
+      <table id="data-table" class="table table-bordered table-striped">
+        <!-- 여기에 테이블 행이 삽입됩니다. -->
+      </table>
+    </div>
+    <script>
+      fetch("http://localhost:8080/getData")
+        .then((response) => response.json())
+        .then((data) => {
+          const table = document.getElementById("data-table");
 
+          // 테이블 헤더 생성
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+          for (const key in data[0]) {
+            const th = document.createElement("th");
+            th.innerText = key;
+            headerRow.appendChild(th);
+          }
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
 
-
+          // 테이블 바디 생성
+          const tbody = document.createElement("tbody");
+          data.forEach((row) => {
+            const tr = document.createElement("tr");
+            for (const key in row) {
+              const td = document.createElement("td");
+              td.innerText = row[key];
+              tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+        })
+        .catch((error) => {
+          console.error("에러 발생:", error);
+        });
+    </script>
+  </body>
+</html>
