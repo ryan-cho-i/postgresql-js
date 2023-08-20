@@ -10,20 +10,22 @@
       crossorigin="anonymous"
     />
     <title>데이터 표</title>
+    <style>
+      #data-table a {
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <div class="container mt-4">
-      <table id="data-table" class="table table-bordered table-striped">
-        <!-- 여기에 테이블 행이 삽입됩니다. -->
-      </table>
+      <table id="data-table" class="table table-bordered table-striped"></table>
     </div>
     <script>
-      fetch("http://localhost:8080/getData")
+      fetch("http://localhost:8080/detail/campaign1")
         .then((response) => response.json())
         .then((data) => {
           const table = document.getElementById("data-table");
 
-          // 테이블 헤더 생성
           const thead = document.createElement("thead");
           const headerRow = document.createElement("tr");
           for (const key in data[0]) {
@@ -34,7 +36,6 @@
           thead.appendChild(headerRow);
           table.appendChild(thead);
 
-          // 테이블 바디 생성
           const tbody = document.createElement("tbody");
           data.forEach((row) => {
             const tr = document.createElement("tr");
