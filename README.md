@@ -5,7 +5,7 @@
 Download this github repository.
 
 ```
-git clone https://github.com/ryan-cho-i/postgresql-js
+git clone https://github.com/ryan-cho-i/simple-dashboard
 ```
 
 Implement docker-compose
