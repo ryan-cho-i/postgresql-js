@@ -21,7 +21,7 @@
       <table id="data-table" class="table table-bordered table-striped"></table>
     </div>
     <script>
-      fetch("http://localhost:8080/detail/campaign1")
+      fetch("http://localhost:8080/main/data")
         .then((response) => response.json())
         .then((data) => {
           const table = document.getElementById("data-table");
@@ -41,7 +41,15 @@
             const tr = document.createElement("tr");
             for (const key in row) {
               const td = document.createElement("td");
-              td.innerText = row[key];
+              if (key === "name") {
+                const a = document.createElement("a");
+                a.href = `http://localhost:8080/detail/${row[key]}`;
+                a.innerText = row[key];
+                a.target = "_blank";
+                td.appendChild(a);
+              } else {
+                td.innerText = row[key];
+              }
               tr.appendChild(td);
             }
             tbody.appendChild(tr);

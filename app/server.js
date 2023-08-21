@@ -1,47 +1,25 @@
 const express = require("express");
 const path = require("path");
 const app = express();
+const { Pool } = require("pg");
+const ExcelJS = require("exceljs");
 
-const { Client } = require("pg");
-
-const client = new Client({
-  host: "localhost",
-  port: 5432,
-  user: "postgres",
-  password: "postgres",
-  database: "dashboard",
-});
-
-client
-  .connect()
-  .then(() => console.log("PostgreSQL Connected successfully"))
-  .catch((error) => console.error("Connection error", error));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "main.html"));
-});
-
-app.get("/campaign1", (req, res) => {
-  res.sendFile(path.join(__dirname, "detail1.html"));
-});
-
-app.get("/campaign2", (req, res) => {
-  res.sendFile(path.join(__dirname, "detail2.html"));
-});
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
 const getQuery = (campaigns) => {
   const queries = campaigns.map(
     (campaign) =>
       `
-    SELECT  
-      '${campaign.name}' as name,
-      sum(impressions) as total_impressions,
-      sum(clicks) as total_clicks,
-      round((sum(clicks)::numeric * 100 / sum(impressions)::numeric)::numeric(10,4), 3) as total_click_rate,
-      sum(video_completions) as total_video_completions 
-    FROM Campaigns 
-    WHERE placement_id IN (${campaign.placementIds.join(", ")})
-    `
+      SELECT
+        '${campaign.name}' as name,
+        sum(impressions) as total_impressions,
+        sum(clicks) as total_clicks,
+        round((sum(clicks)::numeric * 100 / sum(impressions)::numeric)::numeric(10,4), 3) as total_click_rate,
+        sum(video_completions) as total_video_completions
+      FROM Campaigns
+      WHERE placement_id IN (${campaign.placementIds.join(", ")})
+      `
   );
 
   return queries.join(` UNION `);
@@ -56,7 +34,11 @@ const getData = async (client, query) => {
   }
 };
 
-app.get("/main", async (req, res) => {
+app.get("/", (req, res) => {
+  res.render("main");
+});
+
+app.get("/main/data", async (req, res) => {
   const query = getQuery([
     {
       name: "campaign1",
@@ -76,7 +58,12 @@ app.get("/main", async (req, res) => {
   }
 });
 
-app.get("/detail/:campaign", async (req, res) => {
+app.get("/detail/:campaign", (req, res) => {
+  const campaign = req.params.campaign;
+  res.render("detail", { campaign: campaign });
+});
+
+app.get("/detail/:campaign/data", async (req, res) => {
   const campaignValue = req.params.campaign;
   let query;
   if (campaignValue == "campaign1") {
@@ -131,9 +118,9 @@ app.get("/detail/placement/:id", async (req, res) => {
     const data = await getData(
       client,
       `
-    SELECT *
-  FROM Campaigns 
-  WHERE placement_id IN (${id})`
+      SELECT *
+    FROM Campaigns
+    WHERE placement_id IN (${id})`
     );
     res.json(data);
   } catch (err) {
@@ -142,9 +129,90 @@ app.get("/detail/placement/:id", async (req, res) => {
   }
 });
 
-PORT = 8080;
-app.listen(PORT, () => {
+async function readXLSX(filePath) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+  const worksheet = workbook.worksheets[0];
+
+  const data = [];
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber > 1) {
+      data.push(row.values.slice(1));
+    }
+  });
+  return data;
+}
+
+async function createTable(client) {
+  const createTableQuery = `
+  CREATE TABLE IF NOT EXISTS campaigns (
+    Campaign TEXT,
+    Placement TEXT,
+    Placement_ID BIGINT,
+    Date DATE,
+    Impressions INTEGER,
+    Clicks INTEGER,
+    Click_Rate FLOAT,
+    Video_Completions INTEGER
+  );
+  `;
+
+  await client.query(createTableQuery);
+  console.log("Table created successfully");
+}
+
+async function insertToDatabase(client, data) {
   try {
+    await createTable(client);
+    for (const item of data) {
+      await client.query(
+        "INSERT INTO campaigns (Campaign, Placement, Placement_ID, Date, Impressions, Clicks, Click_Rate, Video_Completions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        item
+      );
+    }
+    console.log("Data inserted successfully");
+  } catch (error) {
+    console.error("Error inserting data:", error);
+  }
+}
+
+const pool = new Pool({
+  host: "postgres",
+  port: 5432,
+  user: "postgres",
+  password: "postgres",
+  database: "dashboard",
+});
+
+let client;
+
+async function connectToDatabase() {
+  while (!client) {
+    try {
+      client = await pool.connect();
+      return client;
+    } catch (err) {
+      console.log(
+        "Error connecting to PostgreSQL, retrying in 5 seconds:",
+        err
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+}
+
+const PORT = 8080;
+app.listen(PORT, async () => {
+  try {
+    const client = await connectToDatabase();
+    console.log("PostgreSQL Connected successfully");
+
+    const filePath = path.join(__dirname, "example.xlsx");
+    const xlsxData = await readXLSX(filePath);
+    xlsxData.pop();
+    await insertToDatabase(client, xlsxData);
+    console.log("Upload data to PostgreSQL Database");
+
     console.log(`Server running at http://localhost:${PORT}/`);
   } catch (err) {
     console.log(err);

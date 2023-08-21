@@ -25,6 +25,8 @@
       ></table>
     </div>
     <script>
+      const campaign = "<%= campaign %>"; // 서버에서 전달한 캠페인 이름
+
       function createTable(data, tableId, detailCallback = null) {
         const table = document.getElementById(tableId);
         table.innerHTML = "";
@@ -76,7 +78,7 @@
       }
 
       fetchData(
-        "http://localhost:8080/detail/campaign2",
+        `http://localhost:8080/detail/${campaign}/data`,
         "data-table",
         fetchDetail
       );
