@@ -1,4 +1,4 @@
-# Real Time Bidding System
+# Simple Dashboard
 
 ## 1. Usage
 
@@ -30,6 +30,39 @@ After typing address (http://localhost:8080/) on your browser, the dashboard wil
 
 2. Upload xlsx File to PostgreSQL Database.
 
-3. Turn on Server (http://localhost:8080/)
+3. Access website (http://localhost:8080/)
 
-4. Show the data according to requirements
+4. Website send HTTP Request to the server.
+
+5. Server send Query to database for extracting data.
+
+6. Database send data to server according to Query
+
+7. After receiving data, server send it to website
+
+8. Website display that.
+
+## 4. Problem & Solution
+
+1. Continue to try connecting
+
+```
+async function connectToDatabase() {
+  while (!client) {
+    try {
+      client = await pool.connect();
+      return client;
+    } catch (err) {
+      console.log(
+        "Error connecting to PostgreSQL, retrying in 5 seconds:",
+        err
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+}
+```
+
+"depends_on" option doesn't guarantee the sequence of processes.
+
+Therefore, I use the "setTimeout" function to continue to try connecting.
